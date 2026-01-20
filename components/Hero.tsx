@@ -76,7 +76,7 @@ export default function NocterHero() {
       {/* ARKA PLAN VİDEOSU */}
       <video
         ref={videoRef}
-        src="/nocter-video.mp4" 
+        src="https://res.cloudinary.com/dsvefitse/video/upload/v1768932828/nocter-video_p1pure.mp4" 
         className="absolute inset-0 w-full h-full object-cover"
         muted
         playsInline
