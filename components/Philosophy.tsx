@@ -322,7 +322,7 @@ export default function Philosophy() {
       <div ref={scene5_Alchemy} className="absolute inset-0 flex flex-col items-center justify-center z-10 px-6 text-center">
         <div className="alc-text space-y-8">
           <p className="text-xl md:text-3xl font-serif italic text-white/80">
-            "Şişelerimizde su satmıyoruz."
+            &quot;Şişelerimizde su satmıyoruz.&quot;
           </p>
           <p className="text-lg md:text-2xl font-light text-white/60 max-w-2xl mx-auto leading-relaxed">
             Doğanın en vahşi, en yoğun ve en pahalı <strong className="text-white">özünü</strong><br/> 
@@ -407,11 +407,11 @@ export default function Philosophy() {
       {/* 11. IDENTITY */}
       <div ref={scene11_Identity} className="absolute inset-0 flex flex-col items-center justify-center z-10 px-6 text-center">
         <h2 className="id-q text-3xl md:text-5xl font-serif text-white leading-relaxed max-w-3xl">
-          "Hangi parfümü arıyorsun?"<br/> sorusu yanlıştır.
+          &quot;Hangi parfümü arıyorsun?&quot;<br/> sorusu yanlıştır.
         </h2>
         <h2 className="id-q mt-16 text-3xl md:text-6xl font-serif text-white leading-tight">
           Asıl soru:<br/>
-          "Bugün <span className="id-highlight border-b border-[#D4AF37]">kim</span> olmak istiyorsun?"
+          &quot;Bugün <span className="id-highlight border-b border-[#D4AF37]">kim</span> olmak istiyorsun?&quot;
         </h2>
       </div>
 
@@ -424,7 +424,7 @@ export default function Philosophy() {
           Görünmez <br/> İmzanız.
         </h1>
         
-        <div className="flex flex-col items-center gap-6 animate-pulse opacity-60">
+        <div className="flex flex-col items-center gap-6 animate-pulse opacity-60" aria-hidden="true">
           <span className="text-[10px] tracking-[0.3em] uppercase text-white">
             Koleksiyonu Keşfet
           </span>

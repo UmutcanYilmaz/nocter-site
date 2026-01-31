@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useMemo } from "react";
-import Image from "next/image";
+import { useRef, useState, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -285,7 +284,7 @@ const SocialCard = ({ post }: { post: SocialPost }) => {
         
         <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
           <div className="w-8 h-[1px] bg-[#D4AF37] mb-4 w-0 group-hover:w-8 transition-all duration-500"></div>
-          <p className="text-white font-serif text-xl leading-tight mb-4 italic">"{post.caption}"</p>
+          <p className="text-white font-serif text-xl leading-tight mb-4 italic">&quot;{post.caption}&quot;</p>
           <div className="flex items-center gap-2 text-[10px] text-white/50 uppercase tracking-widest">
             <span className="text-[#D4AF37]">♥</span>
             <span>{post.likes}</span>
@@ -364,20 +363,24 @@ const NewsletterInput = () => {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="group relative">
+          <label htmlFor="newsletter-email" className="sr-only">E-posta Adresiniz</label>
           <div className={`relative flex items-center border-b-2 transition-all duration-500 ${status === "loading" ? "border-white/10" : "border-white/20 focus-within:border-[#D4AF37]"}`}>
             
             <input 
+              id="newsletter-email"
               ref={inputRef}
               required
               type="email" 
               placeholder="E-POSTA ADRESİNİZİ GİRİNİZ" 
               disabled={status === "loading"}
+              aria-label="E-posta Adresiniz"
               className="w-full bg-transparent py-6 text-white placeholder-white/10 outline-none font-light tracking-[0.1em] text-sm md:text-lg uppercase"
             />
             
             <button 
               type="submit"
               disabled={status === "loading"}
+              aria-live="polite"
               className={`absolute right-0 text-xs tracking-[0.3em] uppercase transition-all duration-300 font-bold ${status === "loading" ? "text-white/20" : "text-[#D4AF37] hover:text-white"}`}
             >
               {status === "loading" ? "İŞLENİYOR..." : "DAVETİYE İSTE"}
@@ -508,7 +511,7 @@ export default function BeforeFooter() {
             Karanlık Bülten
           </h3>
           <p className="text-white/40 text-sm md:text-base mb-12 max-w-lg mx-auto leading-relaxed">
-            Yeni lansmanlar, özel davetler ve sadece üyelere özel <span className="text-[#D4AF37]">"Private Batch"</span> satışları için bekleme listesine katılın.
+            Yeni lansmanlar, özel davetler ve sadece üyelere özel <span className="text-[#D4AF37]">&quot;Private Batch&quot;</span> satışları için bekleme listesine katılın.
           </p>
           
           <NewsletterInput />

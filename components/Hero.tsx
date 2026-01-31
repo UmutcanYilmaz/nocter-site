@@ -81,6 +81,7 @@ export default function NocterHero() {
         muted
         playsInline
         preload="auto"
+        aria-label="Noctér atmospheric brand video"
       />
 
       {/* KARARTMA KATMANI */}
@@ -119,7 +120,7 @@ export default function NocterHero() {
       </div>
 
       {/* SCROLL GÖSTERGESİ */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 animate-bounce z-20">
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 animate-bounce z-20" aria-hidden="true">
         <span className="text-[10px] tracking-widest uppercase text-white">KEŞFETMEK İÇİN KAYDIR</span>
         <div className="w-[1px] h-8 bg-gradient-to-b from-white to-transparent" />
       </div>
