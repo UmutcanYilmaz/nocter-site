@@ -235,10 +235,11 @@ export default function Footer() {
           {/* Sağ: Başa Dön */}
           <button 
             onClick={scrollToTop}
+            aria-label="Back to top"
             className="text-[10px] tracking-[0.2em] text-white/30 uppercase hover:text-white transition-colors flex items-center gap-2 group"
           >
             Back to Top
-            <span className="group-hover:-translate-y-1 transition-transform duration-300">↑</span>
+            <span className="group-hover:-translate-y-1 transition-transform duration-300" aria-hidden="true">↑</span>
           </button>
 
         </div>
