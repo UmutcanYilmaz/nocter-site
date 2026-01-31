@@ -87,51 +87,7 @@ export const AtmosphericParticles = ({ color }: { color: string }) => {
   return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0 mix-blend-screen opacity-70" />;
 };
 
-// 2.2 Manyetik Buton
-export const MagneticButton = ({ children, className, primaryColor }: { children: ReactNode, className?: string, primaryColor: string }) => {
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const btn = btnRef.current;
-    const content = contentRef.current;
-    if (!btn || !content) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = btn.getBoundingClientRect();
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-
-      if (Math.abs(x) < 150 && Math.abs(y) < 60) {
-        gsap.to(btn, { x: x * 0.2, y: y * 0.2, duration: 0.3, ease: "power2.out" });
-        gsap.to(content, { x: x * 0.1, y: y * 0.1, duration: 0.3, ease: "power2.out" });
-      } else {
-        gsap.to(btn, { x: 0, y: 0, duration: 0.5, ease: "elastic.out(1, 0.4)" });
-        gsap.to(content, { x: 0, y: 0, duration: 0.5, ease: "elastic.out(1, 0.4)" });
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  return (
-    <button
-      ref={btnRef}
-      className={`relative group ${className}`}
-      style={{ borderColor: `${primaryColor}40` }}
-    >
-      <div
-        className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-10 transition-opacity duration-500"
-        style={{ backgroundColor: primaryColor }}
-      ></div>
-
-      <div ref={contentRef} className="relative z-10 flex items-center justify-center gap-3">
-        {children}
-      </div>
-    </button>
-  );
-};
 
 // 2.3 Kelime Ayırıcı
 export const SplitText = ({ text, className, delay = 0 }: { text: string, className?: string, delay?: number }) => {

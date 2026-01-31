@@ -10,7 +10,7 @@ gsap.registerPlugin(ScrollTrigger);
 export default function NocterHero() {
   const container = useRef(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  
+
   // Metin Referansları
   const text1 = useRef(null);
   const text2 = useRef(null);
@@ -26,7 +26,7 @@ export default function NocterHero() {
       scrollTrigger: {
         trigger: container.current,
         start: "top top",
-        end: "+=4000", 
+        end: "+=4000",
         scrub: 1,
         pin: true,
       },
@@ -34,7 +34,7 @@ export default function NocterHero() {
 
     // VİDEOYU SCROLL İLE SENKRONİZE ET
     tl.to(video, {
-      currentTime: video.duration || 24, 
+      currentTime: video.duration || 24,
       ease: "none",
     });
 
@@ -43,40 +43,55 @@ export default function NocterHero() {
 
     // 1. TRAFFIC: "The World Rushes"
     // Pushed later (starts at 28%) so the red lights are fully visible
-    tl.fromTo(text1.current, 
-      { opacity: 0, scale: 0.9 }, 
-      { opacity: 1, scale: 1, duration: 0.05 }, 0.10) 
+    tl.fromTo(text1.current,
+      { opacity: 0, scale: 0.9 },
+      { opacity: 1, scale: 1, duration: 0.05 }, 0.10)
       .to(text1.current, { opacity: 0, scale: 1.1, duration: 0.05 }, 0.16);
 
     // 2. RAIN: "Command The Silence"
     // Pushed to 48% (approx 11.5s mark)
-    tl.fromTo(text2.current, 
-      { opacity: 0, filter: "blur(10px)" }, 
+    tl.fromTo(text2.current,
+      { opacity: 0, filter: "blur(10px)" },
       { opacity: 1, filter: "blur(0px)", duration: 0.05 }, 0.20)
       .to(text2.current, { opacity: 0, filter: "blur(5px)", duration: 0.05 }, 0.27);
 
     // 3. ENCOUNTER: "Own The Moment"
     // Pushed to 68% (approx 16.3s mark)
-    tl.fromTo(text3.current, 
-      { opacity: 0, letterSpacing: "0.5em" }, 
+    tl.fromTo(text3.current,
+      { opacity: 0, letterSpacing: "0.5em" },
       { opacity: 1, letterSpacing: "0em", duration: 0.05 }, 0.30)
       .to(text3.current, { opacity: 0, duration: 0.05 }, 0.34);
 
     // 4. SHADOW: "Define Your Shadow"
     // Starts at 82% (approx 19.6s mark) to catch the shadow walking
-    tl.fromTo(text4.current, 
-      { opacity: 0, y: 50 }, 
+    tl.fromTo(text4.current,
+      { opacity: 0, y: 50 },
       { opacity: 1, y: 0, duration: 0.1 }, 0.38);
+
+    // --- PARALLAX EFFECT ---
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e;
+      const xPos = (clientX / window.innerWidth - 0.5) * 20;
+      const yPos = (clientY / window.innerHeight - 0.5) * 20;
+
+      gsap.to(text1.current, { x: xPos, y: yPos, duration: 1, ease: "power2.out" });
+      gsap.to(text2.current, { x: -xPos * 1.5, y: -yPos * 1.5, duration: 1, ease: "power2.out" });
+      gsap.to(text3.current, { x: xPos * 0.5, y: yPos * 0.5, duration: 1, ease: "power2.out" });
+      gsap.to(text4.current, { x: -xPos * 0.8, y: -yPos * 0.8, duration: 1, ease: "power2.out" });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
 
   }, { scope: container });
 
   return (
     <div ref={container} className="relative h-screen w-full overflow-hidden bg-black">
-      
+
       {/* ARKA PLAN VİDEOSU */}
       <video
         ref={videoRef}
-        src="https://res.cloudinary.com/dsvefitse/video/upload/v1768932828/nocter-video_p1pure.mp4" 
+        src="https://res.cloudinary.com/dsvefitse/video/upload/v1768932828/nocter-video_p1pure.mp4"
         className="absolute inset-0 w-full h-full object-cover"
         muted
         playsInline
@@ -89,7 +104,7 @@ export default function NocterHero() {
 
       {/* YAZI KATMANI */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 px-4 text-center">
-        
+
         {/* YAZI 1: TRAFİK SAHNESİ */}
         {/* Renk Değişimi: Kırmızı yerine BEYAZ (text-white) yapıldı */}
         <h2 ref={text1} className="absolute text-5xl md:text-8xl font-serif text-white opacity-0 font-bold tracking-tighter mix-blend-overlay">

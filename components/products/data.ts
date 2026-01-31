@@ -10,7 +10,7 @@ export const products: Product[] = [
       year: "EST. 2026",
       batch: "A-001",
       family: "Oryantal / Deri",
-      concentration: "30% Extrait",
+      concentration: "Saf Parfüm Özü",
       origin: "Grasse, Fransa"
     },
     assets: {
@@ -79,7 +79,7 @@ export const products: Product[] = [
       year: "EST. 2026",
       batch: "B-002",
       family: "Odunsu / Aromatik",
-      concentration: "30% Extrait",
+      concentration: "Saf Parfüm Özü",
       origin: "Toskana, İtalya"
     },
     assets: {
@@ -148,7 +148,7 @@ export const products: Product[] = [
       year: "EST. 2026",
       batch: "C-003",
       family: "Mineral / Misk",
-      concentration: "30% Extrait",
+      concentration: "Saf Parfüm Özü",
       origin: "İzlanda"
     },
     assets: {
@@ -217,7 +217,7 @@ export const products: Product[] = [
       year: "EST. 2026",
       batch: "D-004",
       family: "Narenciye / Metalik",
-      concentration: "30% Extrait",
+      concentration: "Saf Parfüm Özü",
       origin: "Tokyo, Japonya"
     },
     assets: {
@@ -286,7 +286,7 @@ export const products: Product[] = [
       year: "EST. 2026",
       batch: "E-005",
       family: "Baharatlı / Amber",
-      concentration: "30% Extrait",
+      concentration: "Saf Parfüm Özü",
       origin: "Marakeş, Fas"
     },
     assets: {

@@ -39,7 +39,7 @@ export default function ProductStage({ product, index, mousePos }: ProductStageP
       scrollTrigger: {
         trigger: panel,
         start: "top top",
-        end: "+=3500",
+        end: "+=4500", // Increased from 3500 to allow more time
         pin: true,
         scrub: 1,
         anticipatePin: 1
@@ -65,12 +65,14 @@ export default function ProductStage({ product, index, mousePos }: ProductStageP
 
     tl.to(olfSections, { opacity: 1, y: 0, stagger: 0.3, duration: 1.5 }, "-=0.5");
 
+    // HOLD PHASE: Force user to see the notes for a moment
+    tl.to({}, { duration: 2 });
+
     tl.to([hero, glow, bgTitleChars, rightContent, chapter3], {
       opacity: 0,
       scale: 1.05,
       filter: "blur(15px)",
       duration: 2,
-      delay: 1
     });
 
   }, { scope: panelRef });
@@ -91,12 +93,12 @@ export default function ProductStage({ product, index, mousePos }: ProductStageP
       <AtmosphericParticles color={product.palette.particleColor} />
 
       <div className="bg-title absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none select-none w-full text-center">
-         <h1
-            className="text-[18vw] md:text-[22vw] font-serif font-bold text-transparent whitespace-nowrap leading-none"
-            style={{ WebkitTextStroke: `1px rgba(255,255,255,0.06)` }}
-         >
-            <SplitText text={product.identity.name.split(' ')[0]} />
-         </h1>
+        <h1
+          className="text-[18vw] md:text-[22vw] font-serif font-bold text-transparent whitespace-nowrap leading-none"
+          style={{ WebkitTextStroke: `1px rgba(255,255,255,0.06)` }}
+        >
+          <SplitText text={product.identity.name.split(' ')[0]} />
+        </h1>
       </div>
 
       <div className="relative z-20 w-full h-full max-w-[1920px] mx-auto grid grid-cols-12 px-6 md:px-16 pointer-events-none">
