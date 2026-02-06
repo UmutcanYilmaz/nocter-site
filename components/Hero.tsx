@@ -1,279 +1,414 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 
 gsap.registerPlugin(ScrollTrigger);
 
+/* ------------------------------------------------------------------ */
+/*  NocterHero                                                         */
+/*  Canvas-rendered scroll-scrub hero with synchronised slogans        */
+/* ------------------------------------------------------------------ */
+
 export default function NocterHero() {
-  const container = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const text1 = useRef<HTMLHeadingElement>(null);
-  const text2 = useRef<HTMLHeadingElement>(null);
-  const text3 = useRef<HTMLHeadingElement>(null);
-  const text4 = useRef<HTMLDivElement>(null);
+  // slogan refs
+  const slogan1 = useRef<HTMLDivElement>(null);
+  const slogan2 = useRef<HTMLDivElement>(null);
+  const slogan3 = useRef<HTMLDivElement>(null);
+  const slogan4 = useRef<HTMLDivElement>(null);
 
-  const [videoReady, setVideoReady] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [ready, setReady] = useState(false);
 
-  // ---- Load the video and ensure it's buffered enough for scrubbing ----
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+  // Frame store
+  const framesRef = useRef<HTMLImageElement[]>([]);
+  const frameCountRef = useRef(0);
 
-    const onReady = () => {
-      // Ensure we are at the very start
-      video.currentTime = 0;
-      setVideoReady(true);
-    };
+  /* ----------------------------------------------------------------
+     STEP 1 — Load video off-screen, extract frames onto temp canvas,
+     convert each to an <img> for instant drawing later.
+     Using a moderate frame-rate (20 fps) keeps memory manageable
+     while still looking buttery-smooth on scroll.
+  ---------------------------------------------------------------- */
+  const extractFrames = useCallback(async () => {
+    const TARGET_FPS = 20;
+    const video = document.createElement("video");
+    video.src = "/nocter-video.mp4";
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.crossOrigin = "anonymous";
 
-    // canplaythrough = browser estimates it can play the whole file without stopping
-    if (video.readyState >= 4) {
-      onReady();
-    } else {
-      video.addEventListener("canplaythrough", onReady, { once: true });
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error("Video failed to load"));
+      video.load();
+    });
+
+    const duration = video.duration;
+    const totalFrames = Math.ceil(duration * TARGET_FPS);
+    frameCountRef.current = totalFrames;
+
+    // Size the offscreen canvas to native video resolution (capped)
+    const MAX_W = 1280;
+    const scale = Math.min(1, MAX_W / video.videoWidth);
+    const w = Math.round(video.videoWidth * scale);
+    const h = Math.round(video.videoHeight * scale);
+
+    const offscreen = document.createElement("canvas");
+    offscreen.width = w;
+    offscreen.height = h;
+    const ctx = offscreen.getContext("2d")!;
+
+    const frames: HTMLImageElement[] = [];
+
+    for (let i = 0; i < totalFrames; i++) {
+      const targetTime = (i / totalFrames) * duration;
+
+      // Seek to exact time
+      video.currentTime = targetTime;
+      await new Promise<void>((resolve) => {
+        video.onseeked = () => resolve();
+      });
+
+      // Draw current frame
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(video, 0, 0, w, h);
+
+      // Convert to blob URL for fast <img> drawing
+      const blob = await new Promise<Blob>((resolve) => {
+        offscreen.toBlob((b) => resolve(b!), "image/webp", 0.82);
+      });
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      await new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+      });
+      frames.push(img);
+
+      setLoadProgress(Math.round(((i + 1) / totalFrames) * 100));
     }
 
-    return () => {
-      video.removeEventListener("canplaythrough", onReady);
-    };
+    framesRef.current = frames;
+
+    // Clean up offscreen video
+    video.src = "";
+    video.load();
+
+    setReady(true);
   }, []);
 
-  // ---- GSAP scroll-driven timeline ----
+  useEffect(() => {
+    extractFrames();
+  }, [extractFrames]);
+
+  /* ----------------------------------------------------------------
+     STEP 2 — Draw a specific frame to the visible canvas,
+     covering the viewport like CSS object-fit: cover.
+  ---------------------------------------------------------------- */
+  const drawFrame = useCallback((index: number) => {
+    const canvas = canvasRef.current;
+    const frames = framesRef.current;
+    if (!canvas || frames.length === 0) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const clamped = Math.max(0, Math.min(index, frames.length - 1));
+    const img = frames[clamped];
+
+    // Cover logic (like object-fit: cover)
+    const cw = canvas.width;
+    const ch = canvas.height;
+    const iw = img.naturalWidth || img.width;
+    const ih = img.naturalHeight || img.height;
+
+    const scale = Math.max(cw / iw, ch / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx = (cw - dw) / 2;
+    const dy = (ch - dh) / 2;
+
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }, []);
+
+  /* ----------------------------------------------------------------
+     STEP 3 — Size the canvas to fill viewport (DPR-aware)
+  ---------------------------------------------------------------- */
+  useEffect(() => {
+    const resize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      // Redraw current frame if available
+      if (framesRef.current.length > 0) drawFrame(0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, [drawFrame]);
+
+  /* ----------------------------------------------------------------
+     STEP 4 — GSAP timeline: scrub frame index + slogan animations.
+     The scroll range is large (8000px) so each "step" of the scrub
+     covers very few frames, producing perfectly smooth playback.
+
+     Slogan schedule (% of scroll):
+       0 -  15%  Slogan 1 — "AKISI DURDUR"        (visible from start)
+      16 -  35%  Slogan 2 — "SESSIZLIGE HUKMET"
+      38 -  58%  Slogan 3 — "Anin Hakimi Ol"
+      62 - 100%  Slogan 4 — "NOCTER / Golgeni Tanimla"
+  ---------------------------------------------------------------- */
   useGSAP(
     () => {
-      if (!videoReady) return;
-      const video = videoRef.current;
-      if (!video || !container.current) return;
+      if (!ready) return;
+      const cont = containerRef.current;
+      if (!cont) return;
 
-      const duration = video.duration || 24;
+      const total = frameCountRef.current;
+      const proxy = { frame: 0 };
 
-      // Proxy object for GSAP to tween
-      const proxy = { time: 0 };
+      // Draw first frame immediately
+      drawFrame(0);
 
       const tl = gsap.timeline({
         scrollTrigger: {
-          trigger: container.current,
+          trigger: cont,
           start: "top top",
-          end: "+=6000", // longer scroll distance = smoother scrub
-          scrub: 1.2, // smoothing factor – higher = smoother but laggier
+          end: "+=8000",
+          scrub: 0.6,
           pin: true,
         },
       });
 
-      // ---------- VIDEO SCRUB ----------
+      /* --- Frame scrub ------------------------------------------ */
       tl.to(
         proxy,
         {
-          time: duration,
+          frame: total - 1,
           ease: "none",
-          duration: 1, // normalized to timeline [0,1]
+          duration: 1,
           onUpdate: () => {
-            // Use fastSeek when available for better performance
-            const t = Math.min(proxy.time, duration - 0.05);
-            if (video.fastSeek) {
-              video.fastSeek(t);
-            } else {
-              video.currentTime = t;
-            }
+            drawFrame(Math.round(proxy.frame));
           },
         },
         0
       );
 
-      // ---------- SLOGAN 1: "AKISI DURDUR" ----------
-      // Visible at start and fades away as scroll begins (0% - 12%)
-      gsap.set(text1.current, { opacity: 1, scale: 1 });
+      /* --- SLOGAN 1: "AKISI DURDUR" (0 - 15%) -------------------- */
+      // Starts fully visible, fades + scales out by 15%
+      gsap.set(slogan1.current, { opacity: 1, scale: 1, y: 0 });
       tl.to(
-        text1.current,
-        { opacity: 0, scale: 1.15, duration: 0.12, ease: "power2.in" },
+        slogan1.current,
+        {
+          opacity: 0,
+          scale: 1.12,
+          y: -30,
+          duration: 0.15,
+          ease: "power2.in",
+        },
         0.0
       );
 
-      // ---------- SLOGAN 2: "SESSiZLiGE HUKMET" ----------
-      // Appears 15% - 30%
+      /* --- SLOGAN 2: "SESSIZLIGE HUKMET" (16% - 35%) -------------- */
       tl.fromTo(
-        text2.current,
-        { opacity: 0, filter: "blur(12px)" },
+        slogan2.current,
+        { opacity: 0, y: 40, filter: "blur(10px)" },
         {
           opacity: 1,
+          y: 0,
           filter: "blur(0px)",
-          duration: 0.06,
+          duration: 0.07,
           ease: "power2.out",
         },
-        0.15
+        0.16
       ).to(
-        text2.current,
+        slogan2.current,
         {
           opacity: 0,
+          y: -30,
           filter: "blur(6px)",
-          duration: 0.09,
+          duration: 0.08,
           ease: "power2.in",
         },
-        0.24
+        0.28
       );
 
-      // ---------- SLOGAN 3: "Anin Hakimi Ol" ----------
-      // Appears 36% - 52%
+      /* --- SLOGAN 3: "Anin Hakimi Ol" (38% - 58%) ----------------- */
       tl.fromTo(
-        text3.current,
-        { opacity: 0, letterSpacing: "0.5em" },
+        slogan3.current,
+        { opacity: 0, letterSpacing: "0.6em", scale: 0.92 },
         {
           opacity: 1,
-          letterSpacing: "0.05em",
-          duration: 0.06,
+          letterSpacing: "0.08em",
+          scale: 1,
+          duration: 0.08,
           ease: "power3.out",
         },
-        0.36
+        0.38
       ).to(
-        text3.current,
-        { opacity: 0, duration: 0.1, ease: "power2.in" },
-        0.48
+        slogan3.current,
+        {
+          opacity: 0,
+          scale: 1.05,
+          y: -20,
+          duration: 0.1,
+          ease: "power2.in",
+        },
+        0.5
       );
 
-      // ---------- SLOGAN 4: "NOCTER / Golgeni Tanimla" ----------
-      // Appears from 60% and stays until end
+      /* --- SLOGAN 4: "NOCTER / Golgeni Tanimla" (62% - 100%) ------ */
       tl.fromTo(
-        text4.current,
-        { opacity: 0, y: 60, scale: 0.95 },
+        slogan4.current,
+        { opacity: 0, y: 60, scale: 0.9 },
         {
           opacity: 1,
           y: 0,
           scale: 1,
-          duration: 0.15,
+          duration: 0.18,
           ease: "power3.out",
         },
-        0.6
+        0.62
       );
 
-      // ---------- MOUSE PARALLAX ----------
-      const handleMouseMove = (e: MouseEvent) => {
-        const xPos = (e.clientX / window.innerWidth - 0.5) * 15;
-        const yPos = (e.clientY / window.innerHeight - 0.5) * 15;
+      /* --- Mouse parallax on slogans ----------------------------- */
+      const onMove = (e: MouseEvent) => {
+        const nx = (e.clientX / window.innerWidth - 0.5) * 12;
+        const ny = (e.clientY / window.innerHeight - 0.5) * 12;
+        const ease = { duration: 1.2, ease: "power2.out" };
 
-        gsap.to(text1.current, {
-          x: xPos,
-          y: yPos,
-          duration: 1.2,
-          ease: "power2.out",
-        });
-        gsap.to(text2.current, {
-          x: -xPos * 1.3,
-          y: -yPos * 1.3,
-          duration: 1.2,
-          ease: "power2.out",
-        });
-        gsap.to(text3.current, {
-          x: xPos * 0.6,
-          y: yPos * 0.6,
-          duration: 1.2,
-          ease: "power2.out",
-        });
-        gsap.to(text4.current, {
-          x: -xPos * 0.5,
-          y: -yPos * 0.5,
-          duration: 1.2,
-          ease: "power2.out",
-        });
+        gsap.to(slogan1.current, { x: nx, y: ny, ...ease });
+        gsap.to(slogan2.current, { x: -nx * 1.2, y: -ny * 1.2, ...ease });
+        gsap.to(slogan3.current, { x: nx * 0.7, y: ny * 0.7, ...ease });
+        gsap.to(slogan4.current, { x: -nx * 0.5, y: -ny * 0.5, ...ease });
       };
-
-      window.addEventListener("mousemove", handleMouseMove);
-      return () => window.removeEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mousemove", onMove);
+      return () => window.removeEventListener("mousemove", onMove);
     },
-    { scope: container, dependencies: [videoReady] }
+    { scope: containerRef, dependencies: [ready, drawFrame] }
   );
 
+  /* ----------------------------------------------------------------
+     RENDER
+  ---------------------------------------------------------------- */
   return (
-    <div
-      ref={container}
+    <section
+      ref={containerRef}
       className="relative h-screen w-full overflow-hidden bg-black"
+      aria-label="Nocter hero section"
     >
-      {/* VIDEO element -- hidden from layout flow, covers the viewport */}
-      <video
-        ref={videoRef}
-        src="/nocter-video.mp4"
-        muted
-        playsInline
-        preload="auto"
-        className="absolute inset-0 w-full h-full object-cover"
-        aria-label="Nocter atmospheric brand video"
+      {/* Canvas for video frames */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full"
+        aria-hidden="true"
       />
 
-      {/* Loading state -- subtle, only shows when video hasn't loaded */}
-      {!videoReady && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black">
-          <div className="mb-4 h-px w-48 overflow-hidden bg-white/10">
-            <div className="h-full w-1/3 bg-[#D4AF37] animate-pulse" />
+      {/* Loading overlay */}
+      {!ready && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black">
+          {/* Brand mark during load */}
+          <p className="text-white font-serif text-3xl tracking-widest mb-8 opacity-80">
+            {"NOCT\u00c9R"}
+          </p>
+          {/* Progress bar */}
+          <div className="w-56 h-[2px] bg-white/10 rounded overflow-hidden">
+            <div
+              className="h-full bg-[#D4AF37] transition-all duration-200 ease-out"
+              style={{ width: `${loadProgress}%` }}
+            />
           </div>
-          <span className="text-[10px] uppercase tracking-[0.3em] text-white/40">
-            {"Deneyim Hazirlaniyor"}
+          <span className="mt-4 text-[10px] uppercase tracking-[0.35em] text-white/40 tabular-nums">
+            {loadProgress < 100
+              ? `${loadProgress}%`
+              : "Deneyim Haz\u0131rlan\u0131yor\u2026"}
           </span>
         </div>
       )}
 
-      {/* DARK GRADIENT OVERLAY */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70 pointer-events-none" />
+      {/* Dark gradient overlay for text legibility */}
+      <div
+        className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/40 via-transparent to-black/60"
+        aria-hidden="true"
+      />
 
-      {/* SLOGAN TEXT LAYER */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 px-4 text-center">
-        {/* 1 - "AKISI DURDUR" -- visible immediately, fades on scroll */}
-        <h2
-          ref={text1}
-          className="absolute text-5xl md:text-8xl font-serif text-white font-bold tracking-tighter"
-          style={{ opacity: videoReady ? 1 : 0 }}
-        >
-          {"AKI\u015EI"}
-          <br />
-          <span className="text-white italic drop-shadow-lg">{"DURDUR"}</span>
-        </h2>
-
-        {/* 2 - "SESSiZLiGE HUKMET" */}
-        <h2
-          ref={text2}
-          className="absolute text-4xl md:text-7xl font-sans text-blue-100 opacity-0 tracking-[0.4em] uppercase font-light drop-shadow-[0_0_20px_rgba(59,130,246,0.4)]"
-        >
-          {"SESS\u0130ZL\u0130\u011EE"}
-          <br />
-          {"H\u00dcKMET"}
-        </h2>
-
-        {/* 3 - "Anin Hakimi Ol" */}
-        <h2
-          ref={text3}
-          className="absolute text-5xl md:text-8xl font-serif text-[#D4AF37] opacity-0 italic drop-shadow-2xl"
-        >
-          {"An\u0131n Hakimi Ol"}
-        </h2>
-
-        {/* 4 - Brand reveal "NOCTER / Golgeni Tanimla" */}
+      {/* ========== SLOGANS ========== */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 px-6 text-center">
+        {/* 1 — "AKISI DURDUR" */}
         <div
-          ref={text4}
-          className="absolute opacity-0 flex flex-col items-center"
+          ref={slogan1}
+          className="absolute flex flex-col items-center"
+          style={{ opacity: ready ? 1 : 0 }}
         >
-          <h1 className="text-7xl md:text-[10rem] font-serif font-bold text-white mb-6 drop-shadow-2xl leading-none">
+          <h2 className="text-5xl sm:text-6xl md:text-8xl font-serif text-white font-bold tracking-tighter leading-none">
+            {"AKI\u015EI"}
+          </h2>
+          <h2 className="text-5xl sm:text-6xl md:text-8xl font-serif text-white italic font-bold tracking-tighter leading-none mt-1 drop-shadow-lg">
+            {"DURDUR"}
+          </h2>
+        </div>
+
+        {/* 2 — "SESSIZLIGE HUKMET" */}
+        <div
+          ref={slogan2}
+          className="absolute flex flex-col items-center opacity-0"
+        >
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-sans text-blue-100 tracking-[0.35em] uppercase font-light drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+            {"SESS\u0130ZL\u0130\u011EE"}
+          </h2>
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-sans text-blue-100 tracking-[0.35em] uppercase font-light mt-1">
+            {"H\u00dcKMET"}
+          </h2>
+        </div>
+
+        {/* 3 — "Anin Hakimi Ol" */}
+        <div
+          ref={slogan3}
+          className="absolute flex flex-col items-center opacity-0"
+        >
+          <h2 className="text-4xl sm:text-6xl md:text-8xl font-serif text-[#D4AF37] italic drop-shadow-2xl">
+            {"An\u0131n Hakimi Ol"}
+          </h2>
+        </div>
+
+        {/* 4 — "NOCTER / Golgeni Tanimla" */}
+        <div
+          ref={slogan4}
+          className="absolute flex flex-col items-center opacity-0"
+        >
+          <h1 className="text-6xl sm:text-8xl md:text-[10rem] font-serif font-bold text-white leading-none drop-shadow-2xl">
             {"NOCT\u00c9R"}
           </h1>
-          <div className="w-24 h-px bg-[#D4AF37] mb-6" />
-          <p className="text-sm md:text-xl text-white/80 tracking-[0.6em] uppercase font-light">
+          <div className="w-20 h-px bg-[#D4AF37] my-5" />
+          <p className="text-xs sm:text-sm md:text-xl text-white/80 tracking-[0.55em] uppercase font-light">
             {"G\u00f6lgeni Tan\u0131mla"}
           </p>
         </div>
       </div>
 
-      {/* SCROLL INDICATOR */}
-      {videoReady && (
+      {/* Scroll indicator */}
+      {ready && (
         <div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 animate-bounce z-20"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50 animate-bounce z-20"
           aria-hidden="true"
         >
-          <span className="text-[10px] tracking-widest uppercase text-white">
-            {"KE\u015eFETMEK \u0130\u00c7\u0130N KAYDIR"}
+          <span className="text-[10px] tracking-[0.25em] uppercase text-white">
+            {"Ke\u015ffetmek \u0130\u00e7in Kayd\u0131r"}
           </span>
-          <div className="w-px h-8 bg-gradient-to-b from-white to-transparent" />
+          <div className="w-px h-7 bg-gradient-to-b from-white to-transparent" />
         </div>
       )}
-    </div>
+    </section>
   );
 }
