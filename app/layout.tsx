@@ -26,11 +26,6 @@ export default function RootLayout({
   return (
     // suppressHydrationWarning eklendi (Eklenti hatalarını önlemek için)
     <html lang="en" suppressHydrationWarning>
-      
-      {/* BURASI: Video Preload Kodunu Eklediğimiz Yer */}
-      <head>
-        <link rel="preload" href="/nocter-video.mp4" as="video" type="video/mp4" />
-      </head>
 
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
